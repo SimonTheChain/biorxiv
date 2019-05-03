@@ -17,6 +17,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
+from tbselenium.tbdriver import TorBrowserDriver
+
 
 class BiorxivSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -125,8 +127,9 @@ class BiorxivDownloaderMiddleware(object):
         spider.logger.info("Spider opened: {}".format(spider.name))
 
         # initialize the selenium driver
-        spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
+        # spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
         # spider.driver = webdriver.PhantomJS()
+        spider.driver = TorBrowserDriver(os.environ["WEBDRIVERS_PATH"])
 
     def spider_closed(self, spider):
         spider.logger.info("Spider closed: {}".format(spider.name))
