@@ -14,31 +14,25 @@ from biorxiv.items import AuthorItem
 from biorxiv.items import ArticleItemLoader
 
 
-class BioRxivSpider(CrawlSpider):
+class TestSpider(CrawlSpider):
     """
-    Crawls BioRxiv to gather various informations
+    Crawls Plos to gather various informations
     """
-    name = "biorxiv_crawler"
-    allowed_domains = ["www.biorxiv.org"]
+    name = "test_crawler"
+    allowed_domains = ["journals.plos.org"]
     start_urls = [
-        "https://www.biorxiv.org/search/%252A",
+        "https://journals.plos.org/plosone/browse/physics",
     ]
 
     rules = (
         Rule(LinkExtractor(
-            allow=r'^https://www.biorxiv.org/content/(.*)'),
+            allow=r'^https://journals.plos.org/plosone/article(.*)'),
             callback='parse_item',
         ),
         Rule(LinkExtractor(
-            allow=r'^https://www.biorxiv.org/search/(.*)page(.*)'),
+            allow=r'^https://journals.plos.org/plosone/browse/physics?page(.*)'),
             follow=True
         ),
-        # to check: it feels like the following would be more efficient
-        # Rule(LinkExtractor(
-        #     allow=r'^https://www.biorxiv.org/content/(.*)article-info(.*)'),
-        #     follow=True,
-        #     callback="parse_history"
-        # ),
     )
 
     def parse_start_url(self, response):
@@ -47,14 +41,9 @@ class BioRxivSpider(CrawlSpider):
         """
         self.logger.info("Crawling initial page: {}".format(response.url))
 
-        # sort by date
-        newest_first = response.xpath('//select[@id="edit-sort"]/option[@value="publication-date-descending"]')
-        newest_first.click()
-        time.sleep(10)  # DEBUG
-
-        # show 100 results per page (to check: this might not be necessary)
-        number_of_results = response.xpath('//select[@id="edit-numresults"]/option[@value="100"]')
-        number_of_results.click()
+        # sort by popularity
+        popular = response.xpath('//*[@class="sort"]/a/[text()="Popular"]')
+        popular.click()
         time.sleep(10)  # DEBUG
 
     def parse_item(self, response):
@@ -69,48 +58,46 @@ class BioRxivSpider(CrawlSpider):
         # populate item
         self.logger.debug(
             "Title: {}".format(
-                response.xpath('//*[@id="page-title"]/text()')
+                response.xpath('//*[@id="artTitle"]/text()')
             )
         )
         article_loader.add_xpath(
             "title",
-            '//*[@id="page-title"]/text()'
+            '//*[@id="artTitle"]/text()'
         )
 
         self.logger.debug(
             "PDF Link: {}".format(
-                response.xpath('//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href')
+                response.xpath('//*[@id="downloadPdf"]/@href')
             )
         )
         article_loader.add_xpath(
             "pdf_link",
-            '//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href'
+            '//*[@id="downloadPdf"]/@href'
         )
 
         self.logger.debug(
             "Abstract: {}".format(
-                response.xpath('//*[@id="abstract-1"]/p/text()')
+                response.xpath('//*[@class="abstract toc-section"]/div/p/text()')
             )
         )
         article_loader.add_xpath(
             "abstract",
-            '//*[@id="abstract-1"]/p/text()'
+            '//*[@class="abstract toc-section"]/div/p/text()'
         )
 
-        # click the info/history tab
-        info_tab = response.xpath(
-            '//*[@id="block-system-main"]/div/div/div/div/div[1]/div/div/div[3]/div/div/ul/li[3]/a[1]/@href'
+        # click the authors tab
+        authors_tab = response.xpath(
+            '//*[@id="tabAuthors"]/a/@href'
         ).extract_first()
-        info_tab.click()
+        authors_tab.click()
 
         authors = []
-        names = response.xpath('//*[@class="highwire-citation-authors"]')
+        names = response.xpath('//h1[text()="About the Authors"]/dl')
 
         for n in names:
             author = AuthorItem()
-            first_name = n.xpath('./span/a/[@class="nlm-given-names"]/text()').extract_first()
-            last_name = n.xpath('./span/a/[@class="nlm-surname"]/text()').extract_first()
-            author["name"] = "{first} {last}".format(first=first_name, last=last_name)
+            author["name"] = n.xpath('./dt/text()')
             author["orcid"] = n.xpath('./span/a/@href')  # to extract
 
             authors.append(dict(author))
