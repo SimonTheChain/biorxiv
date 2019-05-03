@@ -16,7 +16,7 @@ from biorxiv.items import ArticleItemLoader
 
 class BioRxivSpider(CrawlSpider):
     """
-
+    Crawls BioRxiv to gather various informations
     """
     name = "biorxiv_crawler"
     allowed_domains = ["www.biorxiv.org"]
@@ -42,6 +42,9 @@ class BioRxivSpider(CrawlSpider):
     )
 
     def parse_start_url(self, response):
+        """
+        Initial parsing before extracting links
+        """
         self.logger.info("Crawling initial page: {}".format(response.url))
 
         # sort by date
@@ -55,6 +58,9 @@ class BioRxivSpider(CrawlSpider):
         time.sleep(10)  # DEBUG
 
     def parse_item(self, response):
+        """
+        Parses each article page
+        """
         self.logger.info("Crawling page: {}".format(response.url))
 
         # create item instance
@@ -91,6 +97,7 @@ class BioRxivSpider(CrawlSpider):
             '//*[@id="abstract-1"]/p/text()'
         )
 
+        # click the info/history tab
         info_tab = response.xpath(
             '//*[@id="block-system-main"]/div/div/div/div/div[1]/div/div/div[3]/div/div/ul/li[3]/a[1]/@href'
         ).extract_first()
