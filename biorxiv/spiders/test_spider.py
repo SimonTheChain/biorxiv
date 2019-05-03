@@ -92,7 +92,7 @@ class TestSpider(CrawlSpider):
 
         # click the authors tab
         authors_tab = self.driver.find_element_by_xpath(
-            '//*[@id="tabAuthors"]/a/@href'
+            '//*[@id="tabAuthors"]/a'
         )
         authors_tab.click()
 
