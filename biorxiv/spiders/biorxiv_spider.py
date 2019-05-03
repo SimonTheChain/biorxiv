@@ -110,8 +110,18 @@ class BioRxivSpider(CrawlSpider):
 
         addresses = response.xpath('//*[@id="contrib-group-1]')
 
-        for a in addresses:
-            author["address"] = a.xpath('')
+        # for a in addresses:
+        #     author["address"] = a.xpath('')
+
+        self.logger.debug(
+            "Authors: {}".format(
+                authors
+            )
+        )
+        article_loader.add_value(
+            "authors",
+            authors
+        )
 
         self.logger.debug(
             "Copyright Info: {}".format(

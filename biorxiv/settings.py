@@ -26,7 +26,7 @@ ROBOTSTXT_OBEY = True
 
 # logging levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 LOG_ENABLED = True
-LOG_FILE = "tmp/log.txt"
+LOG_FILE = "results/log.txt"
 LOG_LEVEL = "DEBUG"
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
@@ -78,7 +78,7 @@ DOWNLOADER_MIDDLEWARES = {
 
 # export
 FEED_FORMAT = "jsonlines"
-FEED_URI = os.path.join(os.environ["PROJECT_PATH"], os.sep, "results.jsonl")
+FEED_URI = os.path.join(os.environ["PROJECT_PATH"] + os.sep, "results/biorxiv.jsonl")
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
