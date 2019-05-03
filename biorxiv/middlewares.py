@@ -129,7 +129,7 @@ class BiorxivDownloaderMiddleware(object):
         # initialize the selenium driver
         # spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
         # spider.driver = webdriver.PhantomJS()
-        spider.driver = TorBrowserDriver(os.environ["WEBDRIVERS_PATH"])
+        spider.driver = TorBrowserDriver(os.environ["WEBDRIVERS_PATH"] + "/tor-browser_en-US/")
 
     def spider_closed(self, spider):
         spider.logger.info("Spider closed: {}".format(spider.name))
