@@ -35,6 +35,10 @@ class TestSpider(CrawlSpider):
         ),
     )
 
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.driver = None
+
     def parse_start_url(self, response):
         """
         Initial parsing before extracting links
@@ -98,14 +102,10 @@ class TestSpider(CrawlSpider):
         for n in names:
             author = AuthorItem()
             author["name"] = n.xpath('./dt/text()')
-            author["orcid"] = n.xpath('./span/a/@href')  # to extract
+            author["address"] = n.xpath('[@id="authCorresponding-0"]/a/@href')  # to extract
+            author["orcid"] = n.xpath('./[@id="authOrcid-0"]/span/a/@href')  # to extract
 
             authors.append(dict(author))
-
-        addresses = response.xpath('//*[@id="contrib-group-1]')
-
-        # for a in addresses:
-        #     author["address"] = a.xpath('')
 
         self.logger.debug(
             "Authors: {}".format(
@@ -119,22 +119,22 @@ class TestSpider(CrawlSpider):
 
         self.logger.debug(
             "Copyright Info: {}".format(
-                response.xpath('//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()')
+                response.xpath('//*[@class="articleinfo"]/p[4]/text()')
             )
         )
         article_loader.add_xpath(
             "copyright_info",
-            '//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()'
+            '//*[@class="articleinfo"]/p[4]/text()'
         )
 
         self.logger.debug(
             "Date history: {}".format(
-                response.xpath('//*[@class="published-label"]/text()')
+                response.xpath('//*[@class="articleinfo"]/p[3]/text()')
             )
         )
         article_loader.add_xpath(
             "date_history",
-            '//*[@class="published-label"]/text()'
+            '//*[@class="articleinfo"]/p[3]/text()'
         )
 
         return article_loader.load_item()
