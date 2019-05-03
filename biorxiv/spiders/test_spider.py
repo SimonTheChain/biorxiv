@@ -46,7 +46,7 @@ class TestSpider(CrawlSpider):
         self.logger.info("Crawling initial page: {}".format(response.url))
 
         # sort by popularity
-        popular = response.xpath('//*[@class="sort"]/a/[text()="Popular"]')
+        popular = self.driver.find_element_by_xpath('//*[@class="sort"]/a[text()="Popular"]')
         popular.click()
         time.sleep(10)  # DEBUG
 
@@ -91,9 +91,9 @@ class TestSpider(CrawlSpider):
         )
 
         # click the authors tab
-        authors_tab = response.xpath(
+        authors_tab = self.driver.find_element_by_xpath(
             '//*[@id="tabAuthors"]/a/@href'
-        ).extract_first()
+        )
         authors_tab.click()
 
         authors = []
