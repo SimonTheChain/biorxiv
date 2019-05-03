@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-import time  # DEBUG
-
-import scrapy
 from scrapy.spiders import CrawlSpider
 from scrapy.spiders import Rule
 from scrapy.linkextractors import LinkExtractor
@@ -48,7 +44,6 @@ class TestSpider(CrawlSpider):
         # sort by popularity
         popular = self.driver.find_element_by_xpath('//*[@class="sort"]/a[text()="Popular"]')
         popular.click()
-        time.sleep(10)  # DEBUG
 
     def parse_item(self, response):
         """
