@@ -35,4 +35,4 @@ class ArticleItemLoader(ItemLoader):
     """
 
     """
-    default_input_processor = TakeFirst()
+    default_output_processor = TakeFirst()
