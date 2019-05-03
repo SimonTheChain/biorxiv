@@ -39,3 +39,10 @@ class ArticleItemLoader(ItemLoader):
     Applies TakeFirst to all item outputs
     """
     default_output_processor = TakeFirst()
+
+
+class AuthorItemLoader(ItemLoader):
+    """
+    Applies TakeFirst to all item outputs
+    """
+    default_output_processor = TakeFirst()
