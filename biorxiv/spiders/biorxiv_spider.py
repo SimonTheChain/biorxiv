@@ -1,63 +1,33 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-import time  # DEBUG
-
-import scrapy
-from scrapy.spiders import CrawlSpider
-from scrapy.spiders import Rule
-from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import SitemapSpider
 
 from biorxiv.items import ArticleItem
 from biorxiv.items import AuthorItem
 from biorxiv.items import ArticleItemLoader
 
 
-class BioRxivSpider(CrawlSpider):
+class BioRxivSpider(SitemapSpider):
     """
     Crawls BioRxiv to gather various informations
     """
     name = "biorxiv_crawler"
     allowed_domains = ["www.biorxiv.org"]
-    start_urls = [
-        "https://www.biorxiv.org/search/%252A",
+    sitemap_urls = ["https://www.biorxiv.org/sitemap.xml"]
+    sitemap_follow = ["/sitemap"]
+    sitemap_rules = [
+        ('/content/', 'parse_content'),
     ]
 
-    rules = (
-        Rule(LinkExtractor(
-            allow=r'^https://www.biorxiv.org/content/(.*)'),
-            callback='parse_item',
-        ),
-        Rule(LinkExtractor(
-            allow=r'^https://www.biorxiv.org/search/(.*)page(.*)'),
-            follow=True
-        ),
-        # to check: it feels like the following would be more efficient
-        # Rule(LinkExtractor(
-        #     allow=r'^https://www.biorxiv.org/content/(.*)article-info(.*)'),
-        #     follow=True,
-        #     callback="parse_history"
-        # ),
-    )
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.driver = None
 
-    def parse_start_url(self, response):
-        """
-        Initial parsing before extracting links
-        """
-        self.logger.info("Crawling initial page: {}".format(response.url))
+    def parse(self, response):
+        self.logger.debug("RESPONSE: {}".format(response.url))
 
-        # sort by date
-        newest_first = response.xpath('//select[@id="edit-sort"]/option[@value="publication-date-descending"]')
-        newest_first.click()
-        time.sleep(10)  # DEBUG
-
-        # show 100 results per page (to check: this might not be necessary)
-        number_of_results = response.xpath('//select[@id="edit-numresults"]/option[@value="100"]')
-        number_of_results.click()
-        time.sleep(10)  # DEBUG
-
-    def parse_item(self, response):
+    def parse_content(self, response):
         """
         Parses each article page
         """
@@ -98,37 +68,37 @@ class BioRxivSpider(CrawlSpider):
         )
 
         # click the info/history tab
-        info_tab = response.xpath(
-            '//*[@id="block-system-main"]/div/div/div/div/div[1]/div/div/div[3]/div/div/ul/li[3]/a[1]/@href'
-        ).extract_first()
+        info_tab = self.driver.find_element_by_xpath(
+            '//*[@id="block-system-main"]/div/div/div/div/div[1]/div/div/div[3]/div/div/ul/li[3]/a[1]'
+        )
         info_tab.click()
 
-        authors = []
-        names = response.xpath('//*[@class="highwire-citation-authors"]')
-
-        for n in names:
-            author = AuthorItem()
-            first_name = n.xpath('./span/a/[@class="nlm-given-names"]/text()').extract_first()
-            last_name = n.xpath('./span/a/[@class="nlm-surname"]/text()').extract_first()
-            author["name"] = "{first} {last}".format(first=first_name, last=last_name)
-            author["orcid"] = n.xpath('./span/a/@href')  # to extract
-
-            authors.append(dict(author))
-
-        addresses = response.xpath('//*[@id="contrib-group-1]')
-
-        # for a in addresses:
-        #     author["address"] = a.xpath('')
-
-        self.logger.debug(
-            "Authors: {}".format(
-                authors
-            )
-        )
-        article_loader.add_value(
-            "authors",
-            authors
-        )
+        # authors = []
+        # names = response.xpath('//*[@class="highwire-citation-authors"]')
+        #
+        # for n in names:
+        #     author = AuthorItem()
+        #     first_name = n.xpath('./span/a/[@class="nlm-given-names"]/text()').extract_first()
+        #     last_name = n.xpath('./span/a/[@class="nlm-surname"]/text()').extract_first()
+        #     author["name"] = "{first} {last}".format(first=first_name, last=last_name)
+        #     author["orcid"] = n.xpath('./span/a/@href')  # to extract
+        #
+        #     authors.append(dict(author))
+        #
+        # addresses = response.xpath('//*[@id="contrib-group-1]')
+        #
+        # # for a in addresses:
+        # #     author["address"] = a.xpath('')
+        #
+        # self.logger.debug(
+        #     "Authors: {}".format(
+        #         authors
+        #     )
+        # )
+        # article_loader.add_value(
+        #     "authors",
+        #     authors
+        # )
 
         self.logger.debug(
             "Copyright Info: {}".format(
@@ -150,5 +120,5 @@ class BioRxivSpider(CrawlSpider):
             '//*[@class="published-label"]/text()'
         )
 
-        return article_loader.load_item()
+        yield article_loader.load_item()
 
