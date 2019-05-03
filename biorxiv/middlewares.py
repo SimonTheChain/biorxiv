@@ -18,6 +18,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 from tbselenium.tbdriver import TorBrowserDriver
+import tbselenium.common as cm
+from tbselenium.utils import launch_tbb_tor_with_stem
 
 
 class BiorxivSpiderMiddleware(object):
@@ -127,9 +129,20 @@ class BiorxivDownloaderMiddleware(object):
         spider.logger.info("Spider opened: {}".format(spider.name))
 
         # initialize the selenium driver
-        # spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
+        # Chrome
+        spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
+
+        # PhantomJS
         # spider.driver = webdriver.PhantomJS()
-        spider.driver = TorBrowserDriver(os.environ["WEBDRIVERS_PATH"] + "/tor-browser_en-US/")
+
+        # tor browser
+        # tbb_dir = os.path.join(os.environ["WEBDRIVERS_PATH"], "/tor-browser_en-US/")
+        # tor_process = launch_tbb_tor_with_stem(tbb_path=tbb_dir)
+        #
+        # spider.driver = TorBrowserDriver(
+        #     tbb_dir,
+        #     tor_cfg=cm.USE_STEM
+        # )
 
     def spider_closed(self, spider):
         spider.logger.info("Spider closed: {}".format(spider.name))
