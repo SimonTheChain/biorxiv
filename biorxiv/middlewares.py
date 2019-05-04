@@ -94,17 +94,18 @@ class BiorxivDownloaderMiddleware(object):
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
 
-        # use selenium
-        spider.driver.get(request.url)
-        request.meta['driver'] = spider.driver
-        body = to_bytes(spider.driver.page_source)
+        # use selenium for articles page
+        if "content" in request.url:
+            spider.driver.get(request.url)
+            request.meta['driver'] = spider.driver
+            body = to_bytes(spider.driver.page_source)
 
-        return HtmlResponse(
-            spider.driver.current_url,
-            body=body,
-            encoding='utf-8',
-            request=request
-        )
+            return HtmlResponse(
+                spider.driver.current_url,
+                body=body,
+                encoding='utf-8',
+                request=request
+            )
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 
 
+import os
+
 from scrapy.spiders import SitemapSpider
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 from biorxiv.items import ArticleItem
 from biorxiv.items import AuthorItem
@@ -14,24 +22,26 @@ class BioRxivSpider(SitemapSpider):
     """
     name = "biorxiv_crawler"
     allowed_domains = ["www.biorxiv.org"]
-    sitemap_urls = ["https://www.biorxiv.org/sitemap.xml"]
-    sitemap_follow = ["/sitemap"]
+    sitemap_urls = [
+        "https://www.biorxiv.org/sitemap.xml",
+    ]
     sitemap_rules = [
         ('/content/', 'parse_content'),
     ]
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+        # self.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
         self.driver = None
 
     def parse(self, response):
-        self.logger.debug("RESPONSE: {}".format(response.url))
+        self.logger.info("Crawling page: {}".format(response.url))
 
     def parse_content(self, response):
         """
         Parses each article page
         """
-        self.logger.info("Crawling page: {}".format(response.url))
+        self.logger.info("Parsing page: {}".format(response.url))
 
         # create item instance
         article_loader = ArticleItemLoader(item=ArticleItem(), response=response)
@@ -120,5 +130,5 @@ class BioRxivSpider(SitemapSpider):
             '//*[@class="published-label"]/text()'
         )
 
-        yield article_loader.load_item()
+        return article_loader.load_item()
 
