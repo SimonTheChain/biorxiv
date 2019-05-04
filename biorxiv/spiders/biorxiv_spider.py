@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-
 from scrapy.spiders import SitemapSpider
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 
 from biorxiv.items import ArticleItem
 from biorxiv.items import AuthorItem
@@ -25,19 +17,12 @@ class BioRxivSpider(SitemapSpider):
     sitemap_urls = [
         "https://www.biorxiv.org/sitemap.xml",
     ]
-    sitemap_rules = [
-        ('/content/', 'parse_content'),
-    ]
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        # self.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
         self.driver = None
 
     def parse(self, response):
-        self.logger.info("Crawling page: {}".format(response.url))
-
-    def parse_content(self, response):
         """
         Parses each article page
         """
@@ -79,7 +64,7 @@ class BioRxivSpider(SitemapSpider):
 
         # click the info/history tab
         info_tab = self.driver.find_element_by_xpath(
-            '//*[@id="block-system-main"]/div/div/div/div/div[1]/div/div/div[3]/div/div/ul/li[3]/a[1]'
+            '//*[@class="tabs inline panels-ajax-tab"]/li/a'
         )
         info_tab.click()
 
@@ -130,5 +115,4 @@ class BioRxivSpider(SitemapSpider):
             '//*[@class="published-label"]/text()'
         )
 
-        return article_loader.load_item()
-
+        yield article_loader.load_item()

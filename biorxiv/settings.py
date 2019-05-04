@@ -71,7 +71,7 @@ DOWNLOADER_MIDDLEWARES = {
 #}
 
 # limit the number of items
-CLOSESPIDER_ITEMCOUNT = 1
+CLOSESPIDER_ITEMCOUNT = 10
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
