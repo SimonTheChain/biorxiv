@@ -39,13 +39,18 @@ class BioRxivSpider(SitemapSpider):
         """
         self.logger.info("Parsing page: {}".format(response.url))
 
+        print(response.url)  # DEBUG
+
         # create item instance
-        article_loader = ArticleItemLoader(item=ArticleItem(), response=response)
+        article_loader = ArticleItemLoader(
+            item=ArticleItem(),
+            response=response
+        )
 
         # populate item
         self.logger.debug(
             "Title: {}".format(
-                response.xpath('//*[@id="page-title"]/text()')
+                response.xpath('//*[@id="page-title"]/text()').get()
             )
         )
         article_loader.add_xpath(
@@ -53,9 +58,10 @@ class BioRxivSpider(SitemapSpider):
             '//*[@id="page-title"]/text()'
         )
 
+        # TODO: Rewrite pdf link xpath
         self.logger.debug(
             "PDF Link: {}".format(
-                response.xpath('//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href')
+                response.xpath('//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href').get()
             )
         )
         article_loader.add_xpath(
@@ -65,7 +71,7 @@ class BioRxivSpider(SitemapSpider):
 
         self.logger.debug(
             "Abstract: {}".format(
-                response.xpath('//*[@id="abstract-1"]/p/text()')
+                response.xpath('//*[@id="abstract-1"]/p/text()').get()
             )
         )
         article_loader.add_xpath(
@@ -73,53 +79,41 @@ class BioRxivSpider(SitemapSpider):
             '//*[@id="abstract-1"]/p/text()'
         )
 
-        # click the info/history tab
-        info_tab = self.driver.find_element_by_xpath(
-            '//*[@class="tabs inline panels-ajax-tab"]/li/a'
+        # grab the root of the authors elements
+        authors_elem = self.driver.find_element_by_xpath(
+            '//*[@class="highwire-citation-authors"]'
         )
-        info_tab.click()
+
+        names = authors_elem.find_elements_by_xpath(
+            '//span[contains(@class, "highwire-citation-author")]'
+        )
 
         authors = []
-        names = response.xpath('//*[@class="highwire-citation-authors"]')
 
         for n in names:
-            author = AuthorItem()
-            # first_name = n.xpath('.//*[@class="nlm-given-names"]/text()').extract_first()
-            # last_name = n.xpath('.//*[@class="nlm-surname"]/text()').extract_first()
-            # author["name"] = "{first} {last}".format(first=first_name, last=last_name)
-            # author["orcid"] = str(n.xpath('./span/a/@href')).split(sep="/")[-1]
-
-            # reference: https://stackoverflow.com/a/29052586/5242366
-            main_window_handle = None
-
-            while not main_window_handle:
-                main_window_handle = self.driver.current_window_handle
-
             # hover to enable popup
             actions = ActionChains(self.driver)
-            author_element = self.driver.find_element_by_xpath(
-                '//*[contains(@class, "highwire-citation-author")]'
+            actions.move_to_element(n).perform()
+
+            popup = WebDriverWait(
+                driver=self.driver,
+                timeout=10,
+                # poll_frequency=500,
+            ).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "author-popup-hover"))
             )
-            actions.move_to_element(author_element).perform()
 
-            popup_window_handle = None
-
-            while not popup_window_handle:
-                for handle in self.driver.window_handles:
-                    if handle != main_window_handle:
-                        popup_window_handle = handle
-                        break
-
-            # parse popup contents
-            self.driver.switch_to.window(popup_window_handle)
+            # initialize AuthorItem object
+            author = AuthorItem()
 
             # author name
-            author["name"] = self.driver.find_element_by_xpath(
-                '//*[@class="author-tooltip-name"]/text()'
-            )
+            print(popup.find_element_by_xpath('//*[@class="author-tooltip-name"]').text)
+            author["name"] = popup.find_element_by_xpath(
+                '//*[@class="author-tooltip-name"]'
+            ).text
 
             # addresses
-            affiliations_element = self.driver.find_element_by_xpath(
+            affiliations_element = popup.find_element_by_xpath(
                 '//*[@class="author-tooltip-text"]'
             )
             affiliations = []
@@ -133,20 +127,10 @@ class BioRxivSpider(SitemapSpider):
             author["address"] = affiliations
 
             # orcid
-            orcid = self.driver.find_element_by_xpath(
+            orcid = popup.find_element_by_xpath(
                 '//*[@class="author-orcid-link"]/a/@href'
             )
             author["orcid"] = str(orcid).split(sep="/")[-1]
-
-            self.driver.switch_to.window(main_window_handle)
-
-            # popup = WebDriverWait(
-            #     driver=self.driver,
-            #     timeout=10,
-            #     # poll_frequency=500,
-            # ).until(
-            #     EC.presence_of_element_located((By.CLASS_NAME, "author-popup-hover"))
-            # )
 
             authors.append(author)
 
@@ -160,9 +144,15 @@ class BioRxivSpider(SitemapSpider):
             authors
         )
 
+        # click the info/history tab
+        info_tab = self.driver.find_element_by_xpath(
+            '//*[@class="tabs inline panels-ajax-tab"]/li/a'
+        )
+        info_tab.click()
+
         self.logger.debug(
             "Copyright Info: {}".format(
-                response.xpath('//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()')
+                response.xpath('//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()').get()
             )
         )
         article_loader.add_xpath(
@@ -172,7 +162,7 @@ class BioRxivSpider(SitemapSpider):
 
         self.logger.debug(
             "Date history: {}".format(
-                response.xpath('//*[@class="published-label"]/text()')
+                response.xpath('//*[@class="published-label"]/text()').get()
             )
         )
         article_loader.add_xpath(
