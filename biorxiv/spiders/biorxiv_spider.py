@@ -5,6 +5,7 @@ from scrapy.spiders import SitemapSpider
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -95,7 +96,7 @@ class BioRxivSpider(SitemapSpider):
             actions = ActionChains(self.driver)
             actions.move_to_element(n).perform()
 
-            popup = WebDriverWait(
+            WebDriverWait(
                 driver=self.driver,
                 timeout=10,
                 # poll_frequency=500,
@@ -103,36 +104,45 @@ class BioRxivSpider(SitemapSpider):
                 EC.presence_of_element_located((By.CLASS_NAME, "author-popup-hover"))
             )
 
+            # direct calls to popup frame
+            # iframes = self.driver.find_elements_by_tag_name('iframe')
+            # self.driver.switch_to_frame(iframes[-1])
+
             # initialize AuthorItem object
             author = AuthorItem()
 
             # author name
-            print(popup.find_element_by_xpath('//*[@class="author-tooltip-name"]').text)
-            author["name"] = popup.find_element_by_xpath(
-                '//*[@class="author-tooltip-name"]'
-            ).text
+            name = self.driver.find_element_by_xpath('//*[@class="author-tooltip-name"]')
+            self.logger.debug("Author name: {}".format(name.get_attribute("innerText")))
+            author["name"] = name.get_attribute("innerText")
 
             # addresses
-            affiliations_element = popup.find_element_by_xpath(
-                '//*[@class="author-tooltip-text"]'
-            )
-            affiliations = []
-
-            for a in affiliations_element:
-                aff = a.xpath(
-                    './span/span/text()'
-                )
-                affiliations.append(aff)
-
-            author["address"] = affiliations
+            # affiliations_element = popup.find_element_by_xpath(
+            #     '//*[@class="author-tooltip-text"]'
+            # )
+            # affiliations = []
+            #
+            # for a in affiliations_element:
+            #     aff = a.xpath(
+            #         './span/span/text()'
+            #     )
+            #     affiliations.append(aff)
+            #
+            # author["address"] = affiliations
 
             # orcid
-            orcid = popup.find_element_by_xpath(
-                '//*[@class="author-orcid-link"]/a/@href'
-            )
-            author["orcid"] = str(orcid).split(sep="/")[-1]
+            try:
+                print(self.driver.find_element_by_xpath('//*[@class="author-orcid-link"]/a/@href'))
+                orcid = self.driver.find_element_by_xpath(
+                    '//*[@class="author-orcid-link"]/a/@href'
+                )
+                author["orcid"] = str(orcid).split(sep="/")[-1]
+
+            except NoSuchElementException:
+                pass
 
             authors.append(author)
+            # self.driver.switch_to_default_content()
 
         self.logger.debug(
             "Authors: {}".format(
