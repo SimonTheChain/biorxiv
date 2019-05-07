@@ -94,20 +94,18 @@ class BioRxivSpider(SitemapSpider):
             author = AuthorItem()
 
             # author name
-            name = n.xpath('./*[@class="author-tooltip-name"]/text()').get()
+            name = n.xpath(
+                './*[@class="author-tooltip-name"]/text()'
+            ).get()
             self.logger.debug("Author name: {}".format(name))
             author["name"] = name
 
-            # addresses
-            affiliations_elements = n.xpath(
-                '//*[@class="nlm-institution"]'
-            )
-            affiliations = []
-
-            for a in affiliations_elements:
-                affiliations.append(a.xpath('./text()').get())
-
-            author["address"] = affiliations
+            # address
+            affiliation = n.xpath(
+                '//[@class="nlm-institution"]'
+            ).get()
+            self.logger.debug("Address: {}".format(affiliation))
+            author["address"] = affiliation
 
             # orcid
             orcid = n.xpath(
