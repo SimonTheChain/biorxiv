@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
+from urllib.parse import urlparse
+
 from scrapy.spiders import SitemapSpider
 
 from selenium.common.exceptions import TimeoutException
@@ -46,7 +48,7 @@ class BioRxivSpider(SitemapSpider):
             response=response
         )
 
-        # populate item
+        # title
         self.logger.debug(
             "Title: {}".format(
                 response.xpath('//*[@id="page-title"]/text()').get()
@@ -57,17 +59,23 @@ class BioRxivSpider(SitemapSpider):
             '//*[@id="page-title"]/text()'
         )
 
-        # TODO: Rewrite pdf link xpath
+        # pdf link
+        parsed_uri = urlparse(response.url)
+        domain = "{uri.scheme}://{uri.netloc}".format(uri=parsed_uri)
+        pdf = response.xpath('//a[contains(@class, "article-dl-pdf-link")]/@href').get()
+        pdf_link = domain + pdf
+
         self.logger.debug(
             "PDF Link: {}".format(
-                response.xpath('//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href').get()
+                pdf_link
             )
         )
-        article_loader.add_xpath(
+        article_loader.add_value(
             "pdf_link",
-            '//*[@id="mini-panel-biorxiv_art_tools"]/div/div[1]/div/div/div/div/a/@href'
+            pdf_link
         )
 
+        # abstract
         self.logger.debug(
             "Abstract: {}".format(
                 response.xpath('//*[@id="abstract-1"]/p/text()').get()
