@@ -81,6 +81,7 @@ CLOSESPIDER_ITEMCOUNT = 10
 
 # export
 FEED_FORMAT = "jsonlines"
+FEED_EXPORT_ENCODING = "utf-8"
 FEED_URI = os.path.join(os.environ["PROJECT_PATH"] + os.sep, "results/biorxiv.jsonl")
 
 # Enable and configure the AutoThrottle extension (disabled by default)

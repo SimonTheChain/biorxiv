@@ -4,15 +4,21 @@
 from urllib.parse import urlparse
 
 from scrapy.spiders import SitemapSpider
+from scrapy.loader import ItemLoader
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+import lxml.html
+
 from biorxiv.items import ArticleItem
 from biorxiv.items import AuthorItem
-from biorxiv.items import ArticleItemLoader
+
+
+class CrawlerException(Exception):
+    pass
 
 
 class BioRxivSpider(SitemapSpider):
@@ -42,8 +48,12 @@ class BioRxivSpider(SitemapSpider):
         self.logger.info("Parsing page: {}".format(response.url))
         print("Parsing article: {}".format(response.url))  # DEBUG
 
+        if response.status == 404:
+            self.logger.warning("The request resulted in a 404 status")
+            return
+
         # create item instance
-        article_loader = ArticleItemLoader(
+        article_loader = ItemLoader(
             item=ArticleItem(),
             response=response
         )
@@ -76,14 +86,12 @@ class BioRxivSpider(SitemapSpider):
         )
 
         # abstract
-        self.logger.debug(
-            "Abstract: {}".format(
-                response.xpath('//*[@id="abstract-1"]/p/text()').get()
-            )
-        )
-        article_loader.add_xpath(
+        root = lxml.html.fromstring(response.body)
+        abstract = root.xpath('//div[@id="abstract-1"]/p')[-1]
+        self.logger.debug("Abstract: {}".format(abstract.text_content()))
+        article_loader.add_value(
             "abstract",
-            '//*[@id="abstract-1"]/p/text()'
+            abstract.text_content()
         )
 
         names = response.xpath('//div[contains(@id, "hw-article-author-popups")]/div')
@@ -108,9 +116,10 @@ class BioRxivSpider(SitemapSpider):
             author["address"] = affiliation
 
             # orcid
-            orcid = n.xpath(
+            orcid_link = n.xpath(
                 '//*[@class="author-orcid-link"]/a/@href'
             ).get()
+            orcid = str(orcid_link).split(sep="/")[-1]
             self.logger.debug("Orcid: {}".format(orcid))
             author["orcid"] = orcid
 
@@ -147,7 +156,7 @@ class BioRxivSpider(SitemapSpider):
                 # poll_frequency=500,
             ).until(
                 EC.presence_of_element_located(
-                    (By.XPATH, '//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div')
+                    (By.XPATH, '//*[@class="panel-pane pane-biorxiv-copyright"]')
                 )
             )
 
@@ -158,7 +167,7 @@ class BioRxivSpider(SitemapSpider):
 
         # copyright
         copyright_info = response.xpath(
-            '//*[@class="panel-pane pane-biorxiv-copyright"]/*/div[@class="field-item even"]/text()'
+            '//*[@class="panel-pane pane-biorxiv-copyright"]//*/div[@class="field-item even"]/text()'
         )
         self.logger.debug(
             "Copyright Info: {}".format(
@@ -167,18 +176,34 @@ class BioRxivSpider(SitemapSpider):
         )
         article_loader.add_value(
             "copyright_info",
-            copyright_info
+            copyright_info.get()
         )
 
         # date
-        self.logger.debug(
-            "Date history: {}".format(
-                response.xpath('//li[@class="published"]/text()').get()
+        try:
+            date_history = WebDriverWait(
+                driver=self.driver,
+                timeout=30,
+                # poll_frequency=500,
+            ).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//li[@class="published"]')
+                )
             )
-        )
-        article_loader.add_xpath(
-            "date_history",
-            '//li[@class="published"]/text()'
-        )
+
+            self.logger.debug(
+                "Date history: {}".format(
+                    date_history.text
+                )
+            )
+            article_loader.add_value(
+                "date_history",
+                date_history.text
+            )
+
+        except TimeoutException as e:
+            self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
+            print("Skipping article: {}".format(response.url))  # DEBUG
+            return
 
         return article_loader.load_item()

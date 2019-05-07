@@ -6,6 +6,8 @@
 # https://doc.scrapy.org/en/latest/topics/items.html
 
 
+import datetime
+
 import scrapy
 from scrapy.loader import ItemLoader
 from scrapy.loader.processors import TakeFirst
@@ -24,30 +26,45 @@ def strip_newlines(text):
     return text.strip("\n")
 
 
-def extract_orcid(url):
+def convert_to_datetime(publish_string):
     """
-    Extracts the orcid from a url
-    :param url: Url as string
-    :return: Orcid as string
+    Converts a date string into datetime
+    :param publish_string: Date in the form of a string
+    :return: Date in datetime
     """
-    if not isinstance(url, str):
-        raise TypeError("The argument for 'extract_orcid' must be a string")
+    if not isinstance(publish_string, str):
+        raise TypeError("The argument for 'convert_to_datetime' should be a string")
 
-    return url.split(sep="/")[-1]
+    publish_datetime = datetime.datetime.strptime(
+        publish_string,
+        "%B %d, %Y."
+    )
+
+    return publish_datetime
 
 
 class ArticleItem(scrapy.Item):
     """
     Structures data found in articles
     """
-    title = scrapy.Field()
-    pdf_link = scrapy.Field()
-    abstract = scrapy.Field(
-        input_processor=MapCompose(strip_newlines)
+    title = scrapy.Field(
+        output_processor=TakeFirst()
     )
-    copyright_info = scrapy.Field()
+    pdf_link = scrapy.Field(
+        output_processor=TakeFirst()
+    )
+    abstract = scrapy.Field(
+        input_processor=MapCompose(strip_newlines),
+        output_processor=TakeFirst()
+    )
+    copyright_info = scrapy.Field(
+        output_processor=TakeFirst()
+    )
     authors = scrapy.Field()
-    date_history = scrapy.Field()
+    date_history = scrapy.Field(
+        input_processor=MapCompose(convert_to_datetime),
+        output_processor=TakeFirst()
+    )
 
 
 class AuthorItem(scrapy.Item):
@@ -56,20 +73,4 @@ class AuthorItem(scrapy.Item):
     """
     name = scrapy.Field()
     address = scrapy.Field()
-    orcid = scrapy.Field(
-        input_processor=MapCompose(extract_orcid)
-    )
-
-
-class ArticleItemLoader(ItemLoader):
-    """
-    Applies TakeFirst to all item outputs
-    """
-    default_output_processor = TakeFirst()
-
-
-class AuthorItemLoader(ItemLoader):
-    """
-    Applies TakeFirst to all item outputs
-    """
-    default_output_processor = TakeFirst()
+    orcid = scrapy.Field()
