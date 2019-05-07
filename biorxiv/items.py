@@ -24,6 +24,18 @@ def strip_newlines(text):
     return text.strip("\n")
 
 
+def extract_orcid(url):
+    """
+    Extracts the orcid from a url
+    :param url: Url as string
+    :return: Orcid as string
+    """
+    if not isinstance(url, str):
+        raise TypeError("The argument for 'extract_orcid' must be a string")
+
+    return url.split(sep="/")[-1]
+
+
 class ArticleItem(scrapy.Item):
     """
     Structures data found in articles
@@ -44,7 +56,9 @@ class AuthorItem(scrapy.Item):
     """
     name = scrapy.Field()
     address = scrapy.Field()
-    orcid = scrapy.Field()
+    orcid = scrapy.Field(
+        input_processor=MapCompose(extract_orcid)
+    )
 
 
 class ArticleItemLoader(ItemLoader):

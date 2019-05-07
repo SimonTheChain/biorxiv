@@ -102,7 +102,7 @@ class BioRxivSpider(SitemapSpider):
 
             # address
             affiliation = n.xpath(
-                '//[@class="nlm-institution"]'
+                '//span[@class="nlm-institution"]/text()'
             ).get()
             self.logger.debug("Address: {}".format(affiliation))
             author["address"] = affiliation
@@ -111,7 +111,8 @@ class BioRxivSpider(SitemapSpider):
             orcid = n.xpath(
                 '//*[@class="author-orcid-link"]/a/@href'
             ).get()
-            author["orcid"] = str(orcid).split(sep="/")[-1]
+            self.logger.debug("Orcid: {}".format(orcid))
+            author["orcid"] = orcid
 
             authors.append(author)
 
@@ -155,24 +156,29 @@ class BioRxivSpider(SitemapSpider):
             print("Skipping article: {}".format(response.url))  # DEBUG
             return
 
+        # copyright
+        copyright_info = response.xpath(
+            '//*[@class="panel-pane pane-biorxiv-copyright"]/*/div[@class="field-item even"]/text()'
+        )
         self.logger.debug(
             "Copyright Info: {}".format(
-                response.xpath('//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()').get()
+                copyright_info.get()
             )
         )
-        article_loader.add_xpath(
+        article_loader.add_value(
             "copyright_info",
-            '//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div/text()'
+            copyright_info
         )
 
+        # date
         self.logger.debug(
             "Date history: {}".format(
-                response.xpath('//*[@class="published-label"]/text()').get()
+                response.xpath('//li[@class="published"]/text()').get()
             )
         )
         article_loader.add_xpath(
             "date_history",
-            '//*[@class="published-label"]/text()'
+            '//li[@class="published"]/text()'
         )
 
         return article_loader.load_item()
