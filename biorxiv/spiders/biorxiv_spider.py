@@ -3,9 +3,7 @@
 
 from scrapy.spiders import SitemapSpider
 
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -39,8 +37,6 @@ class BioRxivSpider(SitemapSpider):
         Parses each article page
         """
         self.logger.info("Parsing page: {}".format(response.url))
-
-        print(response.url)  # DEBUG
 
         # create item instance
         article_loader = ArticleItemLoader(
@@ -80,69 +76,36 @@ class BioRxivSpider(SitemapSpider):
             '//*[@id="abstract-1"]/p/text()'
         )
 
-        # grab the root of the authors elements
-        authors_elem = self.driver.find_element_by_xpath(
-            '//*[@class="highwire-citation-authors"]'
-        )
-
-        names = authors_elem.find_elements_by_xpath(
-            '//span[contains(@class, "highwire-citation-author")]'
-        )
-
+        names = response.xpath('//div[contains(@id, "hw-article-author-popups")]/div')
         authors = []
 
         for n in names:
-            # hover to enable popup
-            actions = ActionChains(self.driver)
-            actions.move_to_element(n).perform()
-
-            WebDriverWait(
-                driver=self.driver,
-                timeout=10,
-                # poll_frequency=500,
-            ).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "author-popup-hover"))
-            )
-
-            # direct calls to popup frame
-            # iframes = self.driver.find_elements_by_tag_name('iframe')
-            # self.driver.switch_to_frame(iframes[-1])
-
             # initialize AuthorItem object
             author = AuthorItem()
 
             # author name
-            name = self.driver.find_element_by_xpath('//*[@class="author-tooltip-name"]')
-            self.logger.debug("Author name: {}".format(name.get_attribute("innerText")))
-            author["name"] = name.get_attribute("innerText")
+            name = n.xpath('./*[@class="author-tooltip-name"]').get()
+            self.logger.debug("Author name: {}".format(name))
+            author["name"] = name
 
             # addresses
-            # affiliations_element = popup.find_element_by_xpath(
-            #     '//*[@class="author-tooltip-text"]'
-            # )
-            # affiliations = []
-            #
-            # for a in affiliations_element:
-            #     aff = a.xpath(
-            #         './span/span/text()'
-            #     )
-            #     affiliations.append(aff)
-            #
-            # author["address"] = affiliations
+            affiliations_elements = n.xpath(
+                '//*[@class="nlm-institution"]'
+            )
+            affiliations = []
+
+            for a in affiliations_elements:
+                affiliations.append(a.xpath('./text()').get())
+
+            author["address"] = affiliations
 
             # orcid
-            try:
-                print(self.driver.find_element_by_xpath('//*[@class="author-orcid-link"]/a/@href'))
-                orcid = self.driver.find_element_by_xpath(
-                    '//*[@class="author-orcid-link"]/a/@href'
-                )
-                author["orcid"] = str(orcid).split(sep="/")[-1]
-
-            except NoSuchElementException:
-                pass
+            orcid = n.xpath(
+                '//*[@class="author-orcid-link"]/a/@href'
+            ).get()
+            author["orcid"] = str(orcid).split(sep="/")[-1]
 
             authors.append(author)
-            # self.driver.switch_to_default_content()
 
         self.logger.debug(
             "Authors: {}".format(
@@ -155,6 +118,16 @@ class BioRxivSpider(SitemapSpider):
         )
 
         # click the info/history tab
+        self.driver.get(response.url)
+
+        WebDriverWait(
+            driver=self.driver,
+            timeout=10,
+            # poll_frequency=500,
+        ).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "tabs inline panels-ajax-tab"))
+        )
+
         info_tab = self.driver.find_element_by_xpath(
             '//*[@class="tabs inline panels-ajax-tab"]/li/a'
         )
@@ -180,4 +153,4 @@ class BioRxivSpider(SitemapSpider):
             '//*[@class="published-label"]/text()'
         )
 
-        yield article_loader.load_item()
+        return article_loader.load_item()
