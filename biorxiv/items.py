@@ -6,11 +6,22 @@
 # https://doc.scrapy.org/en/latest/topics/items.html
 
 
-import re
-
 import scrapy
 from scrapy.loader import ItemLoader
 from scrapy.loader.processors import TakeFirst
+from scrapy.loader.processors import MapCompose
+
+
+def strip_newlines(text):
+    """
+    Strips newline characters from a string
+    :param text: String to process
+    :return: Cleaned string
+    """
+    if not isinstance(text, str):
+        raise TypeError("The argument for 'strip_newlines' must be a string")
+
+    return text.strip("\n")
 
 
 class ArticleItem(scrapy.Item):
@@ -19,7 +30,9 @@ class ArticleItem(scrapy.Item):
     """
     title = scrapy.Field()
     pdf_link = scrapy.Field()
-    abstract = scrapy.Field()
+    abstract = scrapy.Field(
+        input_processor=MapCompose(strip_newlines)
+    )
     copyright_info = scrapy.Field()
     authors = scrapy.Field()
     date_history = scrapy.Field()
