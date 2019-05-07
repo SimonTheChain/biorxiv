@@ -17,10 +17,6 @@ from biorxiv.items import ArticleItem
 from biorxiv.items import AuthorItem
 
 
-class CrawlerException(Exception):
-    pass
-
-
 class BioRxivSpider(SitemapSpider):
     """
     Crawls BioRxiv to gather various informations
@@ -37,6 +33,8 @@ class BioRxivSpider(SitemapSpider):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.driver = None
+        self.item_count = 0
+        self.item_limit = 10
 
     def parse(self, response):
         pass
@@ -45,8 +43,12 @@ class BioRxivSpider(SitemapSpider):
         """
         Parses each article page
         """
+        # limit the number of items scraped
+        if self.item_count >= self.item_limit:
+            self.logger.info("The maximum number of items allowed has been reached")
+            return
+
         self.logger.info("Parsing page: {}".format(response.url))
-        print("Parsing article: {}".format(response.url))  # DEBUG
 
         if response.status == 404:
             self.logger.warning("The request resulted in a 404 status")
@@ -87,11 +89,14 @@ class BioRxivSpider(SitemapSpider):
 
         # abstract
         root = lxml.html.fromstring(response.body)
-        abstract = root.xpath('//div[@id="abstract-1"]/p')[-1]
-        self.logger.debug("Abstract: {}".format(abstract.text_content()))
+        abstract_parts = root.xpath('//div[@id="abstract-1"]//p')
+        abstract_text = [str(i.text_content()) for i in abstract_parts]
+        abstract = " ".join(abstract_text)
+
+        self.logger.debug("Abstract: {}".format(abstract))
         article_loader.add_value(
             "abstract",
-            abstract.text_content()
+            abstract
         )
 
         names = response.xpath('//div[contains(@id, "hw-article-author-popups")]/div')
@@ -162,7 +167,6 @@ class BioRxivSpider(SitemapSpider):
 
         except TimeoutException as e:
             self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
-            print("Skipping article: {}".format(response.url))  # DEBUG
             return
 
         # copyright
@@ -203,7 +207,7 @@ class BioRxivSpider(SitemapSpider):
 
         except TimeoutException as e:
             self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
-            print("Skipping article: {}".format(response.url))  # DEBUG
             return
 
+        self.item_count += 1
         return article_loader.load_item()

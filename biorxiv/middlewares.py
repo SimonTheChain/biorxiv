@@ -8,18 +8,8 @@
 import os
 
 from scrapy import signals
-from scrapy.http import HtmlResponse
-from scrapy.utils.python import to_bytes
 
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-
-from tbselenium.tbdriver import TorBrowserDriver
-import tbselenium.common as cm
-from tbselenium.utils import launch_tbb_tor_with_stem
 
 
 class BiorxivSpiderMiddleware(object):
@@ -93,19 +83,6 @@ class BiorxivDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-
-        # use selenium for articles page
-        # if "content" in request.url:
-        #     spider.driver.get(request.url)
-        #     request.meta['driver'] = spider.driver
-        #     body = to_bytes(spider.driver.page_source)
-        #
-        #     return HtmlResponse(
-        #         spider.driver.current_url,
-        #         body=body,
-        #         encoding='utf-8',
-        #         request=request
-        #     )
         return None
 
     def process_response(self, request, response, spider):
@@ -131,21 +108,8 @@ class BiorxivDownloaderMiddleware(object):
         spider.logger.info("Spider opened: {}".format(spider.name))
 
         # initialize the selenium driver
-        # Chrome
         spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
         spider.driver.set_page_load_timeout(30)
-
-        # PhantomJS
-        # spider.driver = webdriver.PhantomJS()
-
-        # tor browser
-        # tbb_dir = os.path.join(os.environ["WEBDRIVERS_PATH"], "/tor-browser_en-US/")
-        # tor_process = launch_tbb_tor_with_stem(tbb_path=tbb_dir)
-        #
-        # spider.driver = TorBrowserDriver(
-        #     tbb_dir,
-        #     tor_cfg=cm.USE_STEM
-        # )
 
     def spider_closed(self, spider):
         spider.logger.info("Spider closed: {}".format(spider.name))
