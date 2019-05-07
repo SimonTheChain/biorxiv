@@ -133,6 +133,7 @@ class BiorxivDownloaderMiddleware(object):
         # initialize the selenium driver
         # Chrome
         spider.driver = webdriver.Chrome(os.environ["WEBDRIVERS_PATH"] + "chromedriver")
+        spider.driver.set_page_load_timeout(30)
 
         # PhantomJS
         # spider.driver = webdriver.PhantomJS()

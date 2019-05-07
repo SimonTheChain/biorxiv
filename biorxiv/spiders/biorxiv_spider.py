@@ -3,6 +3,7 @@
 
 from scrapy.spiders import SitemapSpider
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -37,6 +38,7 @@ class BioRxivSpider(SitemapSpider):
         Parses each article page
         """
         self.logger.info("Parsing page: {}".format(response.url))
+        print("Parsing article: {}".format(response.url))  # DEBUG
 
         # create item instance
         article_loader = ArticleItemLoader(
@@ -84,7 +86,7 @@ class BioRxivSpider(SitemapSpider):
             author = AuthorItem()
 
             # author name
-            name = n.xpath('./*[@class="author-tooltip-name"]').get()
+            name = n.xpath('./*[@class="author-tooltip-name"]/text()').get()
             self.logger.debug("Author name: {}".format(name))
             author["name"] = name
 
@@ -118,20 +120,34 @@ class BioRxivSpider(SitemapSpider):
         )
 
         # click the info/history tab
-        self.driver.get(response.url)
+        try:
+            self.driver.get(response.url)
 
-        WebDriverWait(
-            driver=self.driver,
-            timeout=10,
-            # poll_frequency=500,
-        ).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "tabs inline panels-ajax-tab"))
-        )
+        except TimeoutException as e:
+            self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
+            return
 
         info_tab = self.driver.find_element_by_xpath(
-            '//*[@class="tabs inline panels-ajax-tab"]/li/a'
+            '//*[@class="tabs inline panels-ajax-tab"]/*/a[contains(@href, "article-info")]'
         )
         info_tab.click()
+
+        # wait for elements to be visible
+        try:
+            WebDriverWait(
+                driver=self.driver,
+                timeout=30,
+                # poll_frequency=500,
+            ).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, '//*[@class="panel-pane pane-biorxiv-copyright"]/div/div/div')
+                )
+            )
+
+        except TimeoutException as e:
+            self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
+            print("Skipping article: {}".format(response.url))  # DEBUG
+            return
 
         self.logger.debug(
             "Copyright Info: {}".format(
