@@ -7,6 +7,7 @@ from scrapy.spiders import SitemapSpider
 from scrapy.loader import ItemLoader
 
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -34,7 +35,7 @@ class BioRxivSpider(SitemapSpider):
         super().__init__(*a, **kw)
         self.driver = None
         self.item_count = 0
-        self.item_limit = 10
+        self.item_limit = 1000
 
     def parse(self, response):
         pass
@@ -143,15 +144,14 @@ class BioRxivSpider(SitemapSpider):
         # click the info/history tab
         try:
             self.driver.get(response.url)
+            info_tab = self.driver.find_element_by_xpath(
+                '//*[@class="tabs inline panels-ajax-tab"]/*/a[contains(@href, "article-info")]'
+            )
+            info_tab.click()
 
-        except TimeoutException as e:
+        except (TimeoutException, NoSuchElementException) as e:
             self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
             return
-
-        info_tab = self.driver.find_element_by_xpath(
-            '//*[@class="tabs inline panels-ajax-tab"]/*/a[contains(@href, "article-info")]'
-        )
-        info_tab.click()
 
         # wait for elements to be visible
         try:
@@ -165,7 +165,7 @@ class BioRxivSpider(SitemapSpider):
                 )
             )
 
-        except TimeoutException as e:
+        except (TimeoutException, NoSuchElementException) as e:
             self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
             return
 
@@ -205,7 +205,7 @@ class BioRxivSpider(SitemapSpider):
                 date_history.text
             )
 
-        except TimeoutException as e:
+        except (TimeoutException, NoSuchElementException) as e:
             self.logger.warning("Skipping article: {}\n{}".format(response.url, e))
             return
 
